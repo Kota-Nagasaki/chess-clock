@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="対局時計">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);} [hidden]{display:none!important;}</style>
+<title>対局時計</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Shippori+Mincho+B1:wght@500;700&display=swap">
+<style>
+/* Layout: one screen, two facing halves (top rotated 180°), thin control bar between. Single dark look like a hardware clock. */
+:root{
+  --bg:#0d0c0a; --panel:#181613; --panel-active:#2a2419; --panel-flag:#4a1612;
+  --fg:#efe4cf; --muted:#8f8571; --line:#2c2823;
+  --accent:#e2a23b; --danger:#ff5a46; --ok:#8cc66b;
+  --display:"Oswald","Helvetica Neue",Arial,sans-serif;
+  --jp:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+  --ui:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;
+  color-scheme:dark;
+}
+:root[data-skin=walnut]{--bg:#1a120c;--panel:#2a1d14;--panel-active:#3e2a1a;--panel-flag:#4a1612;--fg:#f3e6d0;--muted:#a08a6e;--line:#3a2a1e;--accent:#e8b55c;}
+:root[data-skin=ink]{--bg:#0b1016;--panel:#121a24;--panel-active:#1b2b3d;--panel-flag:#4a1612;--fg:#e6edf5;--muted:#7f8ea1;--line:#1f2a38;--accent:#5fb3ff;}
+:root[data-skin=moss]{--bg:#0b110d;--panel:#141f17;--panel-active:#1f3324;--panel-flag:#4a1612;--fg:#e8efe3;--muted:#86997f;--line:#22312a;--accent:#8fd37a;}
+:root[data-skin=washi]{--bg:#e9e3d6;--panel:#f7f3ea;--panel-active:#fbe9c4;--panel-flag:#f3c9c2;--fg:#2a241c;--muted:#7a7060;--line:#d6cdbb;--accent:#c4651f;--danger:#c0392b;color-scheme:light;}
+:root[data-skin=mono]{--bg:#000;--panel:#000;--panel-active:#1c1c1c;--panel-flag:#3a0d0d;--fg:#fff;--muted:#888;--line:#333;--accent:#fff;}
+:root[data-skin=mono] .side .turn{color:#000;}
+:root[data-skin=washi] .side.active{box-shadow:inset 0 0 0 8px var(--accent),inset 0 0 60px rgba(196,101,31,.18);}
+:root[data-skin=washi] .side.active .time{text-shadow:none;}
+:root[data-skin=mono] .side.active{box-shadow:inset 0 0 0 8px var(--accent);}
+:root[data-skin=mono] .side.active .time{text-shadow:none;}
+:root[data-skin=washi] .side .turn,:root[data-skin=washi] .bar button.primary,:root[data-skin=washi] .panel button.primary{color:#fff;}
+html,body{height:100%;}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--ui);overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;}
+.app{height:100%;display:grid;grid-template-rows:1fr auto 1fr;}
+.side{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4em;
+  background:var(--panel);transition:background .15s;cursor:pointer;min-height:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));}
+.side.active{background:var(--panel-active);box-shadow:inset 0 0 0 8px var(--accent),inset 0 0 60px rgba(226,162,59,.25);}
+.side.idle{opacity:.45;}
+.side.idle .time{font-size:min(14vw,16vh);color:var(--muted);}
+.side.flag{background:var(--panel-flag);opacity:1;}
+.side .turn{font-family:var(--jp);font-weight:700;font-size:clamp(14px,2.4vh,24px);letter-spacing:.3em;padding:.3em .9em .3em 1.2em;border-radius:2em;
+  background:var(--accent);color:#1a1206;visibility:hidden;animation:pulse 1s ease-in-out infinite;}
+.side.active .turn{visibility:visible;}
+.side.active .time{text-shadow:0 0 .12em rgba(226,162,59,.45);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.side.top{padding-top:env(safe-area-inset-top,0px);}
+.side.bottom{padding-bottom:env(safe-area-inset-bottom,0px);}
+.face .side.top{transform:rotate(180deg);}
+.side .name{font-family:var(--jp);font-weight:700;font-size:clamp(16px,2.6vh,28px);letter-spacing:.25em;color:var(--muted);}
+.side.active .name{color:var(--accent);}
+.side .time{font-family:var(--display);font-weight:600;font-size:min(24vw,30vh);line-height:1;letter-spacing:.02em;
+  font-variant-numeric:tabular-nums;color:var(--fg);}
+.side .time .d{display:inline-block;width:.56em;text-align:center;}
+.side .time .c{display:inline-block;width:.3em;text-align:center;}
+.side .time.low{color:var(--danger);}
+.side .time.byo{color:var(--accent);}
+.side .sub{font-size:clamp(13px,2.2vh,22px);color:var(--muted);display:flex;gap:1.4em;font-variant-numeric:tabular-nums;}
+.side .sub b{color:var(--fg);font-weight:500;}
+.side .hint{position:absolute;bottom:.8em;font-size:clamp(11px,1.8vh,16px);color:var(--muted);opacity:.8;}
+.side.top .hint{bottom:auto;top:.8em;}
+.face .side.top .hint{top:auto;bottom:.8em;}
+.side.flag .time{color:var(--danger);}
+.side.flag .name{color:var(--danger);}
+
+.bar{display:flex;justify-content:center;gap:.6em;background:var(--bg);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding-block:.5em;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));flex-wrap:wrap;}
+.bar button{font:inherit;font-size:clamp(14px,2.2vh,20px);background:var(--panel);color:var(--fg);border:1px solid var(--line);
+  border-radius:.4em;padding:.45em .9em;min-width:3.4em;cursor:pointer;}
+.bar button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.bar button.primary{background:var(--accent);color:#1a1206;border-color:var(--accent);font-weight:600;}
+.bar button.danger{color:var(--danger);}
+.bar .status{align-self:center;font-size:clamp(12px,1.9vh,16px);color:var(--muted);padding:0 .6em;min-width:7em;}
+
+/* settings sheet */
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:20;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px;}
+.sheet[hidden]{display:none;}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:.8em;width:min(100%,640px);max-height:100%;overflow:auto;
+  padding:1.2em 1.3em;display:flex;flex-direction:column;gap:1.1em;font-size:16px;}
+.panel h2{font-family:var(--jp);font-weight:700;margin:0;font-size:1.25em;letter-spacing:.15em;}
+.panel h3{margin:0 0 .5em;font-size:.85em;letter-spacing:.12em;color:var(--muted);font-weight:600;text-transform:uppercase;}
+.panel h3.jp{font-family:var(--jp);text-transform:none;font-size:1em;color:var(--fg);}
+.modes{display:flex;flex-direction:column;gap:.5em;}
+.modes label{display:flex;gap:.7em;align-items:flex-start;padding:.6em .8em;border:1px solid var(--line);border-radius:.5em;cursor:pointer;}
+.modes label:has(input:checked){border-color:var(--accent);background:var(--panel-active);}
+.modes input{margin-top:.25em;}
+.modes small{display:block;color:var(--muted);margin-top:.15em;}
+.row{display:flex;flex-wrap:wrap;gap:.6em 1.2em;align-items:center;}
+.row label{display:flex;align-items:center;gap:.4em;}
+input[type=number]{font:inherit;font-variant-numeric:tabular-nums;width:4.2em;padding:.35em .4em;background:var(--bg);color:var(--fg);
+  border:1px solid var(--line);border-radius:.35em;text-align:right;}
+select,input[type=range]{font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:.35em;padding:.3em .4em;max-width:100%;}
+.ann{display:grid;grid-template-columns:auto 1fr;gap:.5em .8em;align-items:center;}
+.ann .lead{color:var(--muted);font-size:.9em;}
+.toggles label{display:flex;align-items:center;gap:.5em;}
+.skins{display:flex;flex-wrap:wrap;gap:.5em;}
+.skins label{display:flex;align-items:center;gap:.5em;padding:.45em .8em;border:1px solid var(--line);border-radius:2em;cursor:pointer;}
+.skins label:has(input:checked){border-color:var(--accent);background:var(--panel-active);}
+.skins input{position:absolute;opacity:0;width:0;height:0;}
+.skins .sw{width:1.4em;height:1.4em;border-radius:50%;background:linear-gradient(135deg,var(--a) 50%,var(--b) 50%);border:1px solid var(--line);}
+.panel .actions{display:flex;gap:.6em;justify-content:flex-end;flex-wrap:wrap;}
+.panel button{font:inherit;padding:.55em 1.1em;border-radius:.4em;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;}
+.panel button.primary{background:var(--accent);color:#1a1206;border-color:var(--accent);font-weight:600;}
+.panel button:focus-visible,.panel input:focus-visible,.panel select:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.note{font-size:.85em;color:var(--muted);line-height:1.5;margin:0;}
+@media (prefers-reduced-motion:reduce){.side{transition:none;}.side .turn{animation:none;}}
+</style>
+</head>
+<body>
+
+<div class="app face" id="app">
+  <section class="side top" id="side0" data-p="0">
+    <div class="turn">手番</div>
+    <div class="name" id="name0">—</div>
+    <div class="time" id="time0"></div>
+    <div class="sub" id="sub0"></div>
+    <div class="hint" id="hint0"></div>
+  </section>
+  <div class="bar">
+    <button id="btnSettings" type="button">設定</button>
+    <button id="btnStart" type="button" class="primary">開始</button>
+    <button id="btnReset" type="button" class="danger">リセット</button>
+    <button id="btnSound" type="button" aria-pressed="true">音 ON</button>
+    <button id="btnFull" type="button">全画面</button>
+    <span class="status" id="status">待機中</span>
+  </div>
+  <section class="side bottom" id="side1" data-p="1">
+    <div class="turn">手番</div>
+    <div class="name" id="name1">—</div>
+    <div class="time" id="time1"></div>
+    <div class="sub" id="sub1"></div>
+    <div class="hint" id="hint1"></div>
+  </section>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <form class="panel" id="form">
+    <h2>設定</h2>
+    <div>
+      <h3 class="jp">時間方式</h3>
+      <div class="modes">
+        <label><input type="radio" name="mode" value="move" id="modeMove"><span>切れ負け<small>一手ごとに n 秒。使い切ったら負け。</small></span></label>
+        <label><input type="radio" name="mode" value="byo" id="modeByo" checked><span>秒読み<small>持ち時間 n を使い切ったら、一手ごとに m 秒の秒読み。</small></span></label>
+        <label><input type="radio" name="mode" value="fischer" id="modeFischer"><span>フィッシャー方式<small>持ち時間 n から始め、一手指すごとに m 秒を加算。</small></span></label>
+      </div>
+    </div>
+    <div class="row">
+      <label id="lblN">持ち時間</label>
+      <label><input type="number" id="nMin" min="0" max="599" value="10"> 分</label>
+      <label><input type="number" id="nSec" min="0" max="59" value="0"> 秒</label>
+      <label id="lblM">秒読み <input type="number" id="mSec" min="1" max="3599" value="30"> 秒</label>
+    </div>
+    <div>
+      <h3 class="jp">お知らせのタイミング（残り時間）</h3>
+      <div class="ann">
+        <span class="lead">通常</span><span><input type="number" id="i0" min="1" value="5"> 分ごと</span>
+        <span class="lead">残り</span><span><input type="number" id="t0" min="1" value="5"> 分以下は <input type="number" id="i1" min="1" value="60"> 秒ごと</span>
+        <span class="lead">残り</span><span><input type="number" id="t1" min="1" value="60"> 秒以下は <input type="number" id="i2" min="1" value="10"> 秒ごと</span>
+        <span class="lead">残り</span><span><input type="number" id="t2" min="1" value="10"> 秒以下は <input type="number" id="i3" min="1" value="1"> 秒ごと</span>
+      </div>
+    </div>
+    <div>
+      <h3 class="jp">カラー</h3>
+      <div class="skins" id="skins">
+        <label><input type="radio" name="skin" value="default" checked><span class="sw" style="--a:#e2a23b;--b:#181613"></span>琥珀</label>
+        <label><input type="radio" name="skin" value="walnut"><span class="sw" style="--a:#e8b55c;--b:#2a1d14"></span>胡桃</label>
+        <label><input type="radio" name="skin" value="ink"><span class="sw" style="--a:#5fb3ff;--b:#121a24"></span>藍</label>
+        <label><input type="radio" name="skin" value="moss"><span class="sw" style="--a:#8fd37a;--b:#141f17"></span>苔</label>
+        <label><input type="radio" name="skin" value="washi"><span class="sw" style="--a:#c4651f;--b:#f7f3ea"></span>和紙</label>
+        <label><input type="radio" name="skin" value="mono"><span class="sw" style="--a:#fff;--b:#000"></span>白黒</label>
+      </div>
+    </div>
+    <div>
+      <h3 class="jp">音声</h3>
+      <div class="row">
+        <label>声 <select id="voice"></select></label>
+        <label>速さ <input type="range" id="rate" min="0.7" max="1.6" step="0.1" value="1.1"></label>
+        <label>音量 <input type="range" id="volume" min="0" max="1" step="0.05" value="1"> <span id="volumeVal">100%</span> <button type="button" id="btnTest">試聴</button></label>
+      </div>
+      <p class="note">iPad 内蔵の日本語音声（Kyoko など）を使います。設定 → アクセシビリティ → 読み上げコンテンツ → 声 から別の日本語音声を追加できます。</p>
+    </div>
+    <div class="toggles row">
+      <label><input type="checkbox" id="optSpeech" checked> 秒読みを音声で読む</label>
+      <label><input type="checkbox" id="optClick" checked> 手を渡すときカチッと鳴らす</label>
+      <label><input type="checkbox" id="optFace" checked> 上側を反転（対面用）</label>
+    </div>
+    <div class="actions">
+      <button type="button" id="btnCancel">閉じる</button>
+      <button type="button" id="btnApply">適用（時計はそのまま）</button>
+      <button type="submit" class="primary">この設定でリセット</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const DEFAULTS={mode:'byo',nMin:10,nSec:0,mSec:30,i0:5,t0:5,i1:60,t1:60,i2:10,t2:10,i3:1,rate:1.1,voice:'',volume:1,skin:'default',speech:true,click:true,face:true};
+  let cfg={...DEFAULTS};
+  try{const s=localStorage.getItem('taikyoku-clock');if(s)cfg={...DEFAULTS,...JSON.parse(s)};}catch(e){}
+
+  // ---------- audio ----------
+  let actx=null, master=null, muted=false;
+  function audio(){ if(!actx){const C=window.AudioContext||window.webkitAudioContext;if(C){actx=new C();master=actx.createGain();master.connect(actx.destination);}} if(actx&&actx.state==='suspended')actx.resume().catch(()=>{}); if(master)master.gain.value=cfg.volume; return actx; }
+  function click(){
+    if(muted||!cfg.click)return; const c=audio(); if(!c)return;
+    const t=c.currentTime, len=0.05, buf=c.createBuffer(1,Math.ceil(c.sampleRate*len),c.sampleRate), d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++){d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);}
+    const src=c.createBufferSource();src.buffer=buf;
+    const f=c.createBiquadFilter();f.type='bandpass';f.frequency.value=2600;f.Q.value=0.8;
+    const g=c.createGain();g.gain.setValueAtTime(0.9,t);g.gain.exponentialRampToValueAtTime(0.001,t+len);
+    src.connect(f).connect(g).connect(master);src.start(t);
+    const o=c.createOscillator();o.type='square';o.frequency.value=1400;
+    const g2=c.createGain();g2.gain.setValueAtTime(0.25,t);g2.gain.exponentialRampToValueAtTime(0.001,t+0.02);
+    o.connect(g2).connect(master);o.start(t);o.stop(t+0.03);
+  }
+  function beep(){ if(muted)return; const c=audio(); if(!c)return; const t=c.currentTime;
+    const o=c.createOscillator();o.type='sine';o.frequency.value=880;const g=c.createGain();
+    g.gain.setValueAtTime(0.4,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.5);o.connect(g).connect(master);o.start(t);o.stop(t+0.5); }
+
+  // ---------- speech ----------
+  const synth=window.speechSynthesis; let voices=[];
+  function loadVoices(){ if(!synth)return; voices=synth.getVoices().filter(v=>/^ja/i.test(v.lang));
+    const sel=$('voice'); sel.innerHTML=''; if(!voices.length){sel.append(new Option('（日本語音声が見つかりません）',''));return;}
+    voices.forEach(v=>sel.append(new Option(v.name+(v.localService?'':'（オンライン）'),v.name)));
+    if(voices.some(v=>v.name===cfg.voice))sel.value=cfg.voice; else{sel.value=voices[0].name;}
+  }
+  if(synth){loadVoices();synth.addEventListener('voiceschanged',loadVoices);}
+  function say(text){ if(muted||!cfg.speech||!synth)return;
+    try{ synth.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang='ja-JP'; u.rate=cfg.rate; u.volume=cfg.volume;
+      const v=voices.find(v=>v.name===cfg.voice)||voices[0]; if(v)u.voice=v; synth.speak(u);}catch(e){}
+  }
+
+  // ---------- state ----------
+  const P=[{},{}]; // 0 = 後手(top), 1 = 先手(bottom)
+  let started=false, running=false, active=-1, flagged=-1, turnStart=0, raf=0, wake=null;
+  const nSecTotal=()=>cfg.nMin*60+cfg.nSec;
+  function newPlayer(){ return {remain:nSecTotal(), inByo:false, moves:0, lastSec:0}; }
+  function reset(){ P[0]=newPlayer();P[1]=newPlayer(); started=false;running=false;active=-1;flagged=-1; names[0]=names[1]=''; releaseWake(); render(); setStatus('どちらかをタップで開始'); $('btnStart').textContent='開始'; }
+  function setStatus(t){$('status').textContent=t;}
+  const names=['',''];
+  function nameOf(i){return names[i]||(i===1?'下側':'上側');}
+  function turnStatus(j){setStatus(nameOf(j)+'の手番');}
+  function live(i){ const p=P[i]; return (running&&active===i)? p.remain-(performance.now()-turnStart)/1000 : p.remain; }
+  function startTurn(j){ const p=P[j]; if(cfg.mode==='move')p.remain=nSecTotal(); else if(cfg.mode==='byo'&&p.inByo)p.remain=cfg.mSec;
+    p.lastSec=Math.ceil(p.remain); active=j; turnStart=performance.now(); }
+  function start(){ // 開始ボタン: 先手(1)の時計を動かす
+    if(flagged>=0)return; audio(); if(synth){try{synth.cancel();}catch(e){}}
+    if(!started){ setStatus('どちらかをタップで開始（タップした側が後手）'); return; }
+    else{ turnStart=performance.now(); }
+    running=true; requestWake(); $('btnStart').textContent='一時停止'; turnStatus(active); loop();
+  }
+  function pause(){ if(!running)return; P[active].remain=live(active); running=false; releaseWake(); $('btnStart').textContent='再開'; setStatus('一時停止'); render(); if(synth){try{synth.cancel();}catch(e){}} }
+  function pass(i){ // i が手を渡す
+    if(flagged>=0)return; audio();
+    if(!started){ started=true; running=true; names[i]='後手'; names[1-i]='先手'; startTurn(1-i); click(); say('開始'); requestWake(); $('btnStart').textContent='一時停止'; turnStatus(1-i); loop(); return; }
+    if(!running){ // 一時停止中は手番の側だけ再開
+      if(i!==active)return; start(); return; }
+    if(i!==active)return;
+    const p=P[i]; p.remain=live(i); p.moves++;
+    if(cfg.mode==='fischer')p.remain+=cfg.mSec;
+    click(); if(synth){try{synth.cancel();}catch(e){}}
+    startTurn(1-i); turnStatus(1-i);
+  }
+  function flag(i){ P[i].remain=0; running=false; flagged=i; releaseWake(); render(); setStatus(nameOf(i)+' 時間切れ'); $('btnStart').textContent='開始'; beep(); say('時間切れ'); }
+
+  function announceText(s){ if(s>=60&&s%60===0)return '残り'+(s/60)+'分'; if(s>=60)return '残り'+Math.floor(s/60)+'分'+(s%60)+'秒'; if(s>10)return s+'秒'; if(s===10)return '10秒'; return String(s); }
+  function shouldAnnounce(s){ if(s<=0)return false; if(s<=cfg.t2)return s%cfg.i3===0; if(s<=cfg.t1)return s%cfg.i2===0; if(s<=cfg.t0*60)return s%cfg.i1===0; return s%(cfg.i0*60)===0; }
+
+  function tick(){ if(!running)return; const i=active, p=P[i]; const l=live(i);
+    if(l<=0){ if(cfg.mode==='byo'&&!p.inByo){ p.inByo=true; p.remain=cfg.mSec+l; turnStart=performance.now(); p.lastSec=Math.ceil(p.remain); say('秒読み、'+cfg.mSec+'秒'); }
+      else { flag(i); return; } }
+    else { const s=Math.ceil(l); if(s!==p.lastSec){ p.lastSec=s; if(shouldAnnounce(s))say(announceText(s)); } }
+  }
+  function loop(){ cancelAnimationFrame(raf); const step=()=>{ if(!running)return; tick(); render(); raf=requestAnimationFrame(step); }; step(); }
+  // background fallback: rAF stops when the tab is hidden, setInterval keeps timekeeping and announcements alive
+  setInterval(()=>{ if(running&&document.hidden)tick(); },200);
+
+  // ---------- render ----------
+  function fmt(t){ t=Math.max(0,t); if(t<10)return (Math.floor(t*10)/10).toFixed(1); const h=Math.floor(t/3600), m=Math.floor(t%3600/60), s=Math.floor(t%60);
+    return (h?h+':'+String(m).padStart(2,'0'):String(m))+':'+String(s).padStart(2,'0'); }
+  function digits(str){ return str.split('').map(ch=>/\d/.test(ch)?'<span class="d">'+ch+'</span>':'<span class="c">'+ch+'</span>').join(''); }
+  function render(){ for(let i=0;i<2;i++){ const p=P[i], l=live(i), side=$('side'+i), tEl=$('time'+i), sub=$('sub'+i), hint=$('hint'+i);
+      $('name'+i).textContent=names[i]||'—';
+      side.classList.toggle('active',running&&active===i); side.classList.toggle('idle',running&&active!==i); side.classList.toggle('flag',flagged===i);
+      tEl.innerHTML=digits(flagged===i?'0.0':fmt(l)); tEl.classList.toggle('low',flagged!==i&&l<=cfg.t2); tEl.classList.toggle('byo',p.inByo&&flagged!==i);
+      let s='<span>'+(p.moves)+'手</span>';
+      if(cfg.mode==='byo')s+=p.inByo?'<span>秒読み <b>'+cfg.mSec+'秒</b></span>':'<span>切れたら <b>'+cfg.mSec+'秒</b></span>';
+      else if(cfg.mode==='fischer')s+='<span>一手 <b>+'+cfg.mSec+'秒</b></span>'; else s+='<span>一手 <b>'+nSecTotal()+'秒</b></span>';
+      sub.innerHTML=s;
+      hint.textContent=flagged===i?'時間切れ':(!started?'最初にタップした側が後手（相手の時計が動きます）':(running&&active===i?'指したらタップ':(running?'':'タップで再開')));
+    } }
+
+  // ---------- wake lock ----------
+  async function requestWake(){ try{ if('wakeLock' in navigator&&!wake){ wake=await navigator.wakeLock.request('screen'); wake.addEventListener('release',()=>{wake=null;}); } }catch(e){ wake=null; } }
+  function releaseWake(){ if(wake){ wake.release().catch(()=>{}); wake=null; } }
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&running)requestWake(); });
+
+  // ---------- events ----------
+  ['side0','side1'].forEach((id,i)=>{ const el=$(id); let last=0;
+    el.addEventListener('pointerdown',e=>{ e.preventDefault(); const now=Date.now(); if(now-last<120)return; last=now; pass(i); }); });
+  $('btnStart').addEventListener('click',()=>{ if(running)pause(); else start(); });
+  $('btnReset').addEventListener('click',()=>{ if(running)pause(); if($('btnReset').dataset.arm==='1'){ $('btnReset').dataset.arm='';$('btnReset').textContent='リセット'; reset(); }
+    else { $('btnReset').dataset.arm='1'; $('btnReset').textContent='本当にリセット？'; setTimeout(()=>{ $('btnReset').dataset.arm='';$('btnReset').textContent='リセット'; },2500); } });
+  $('btnSound').addEventListener('click',()=>{ muted=!muted; $('btnSound').textContent=muted?'音 OFF':'音 ON'; $('btnSound').setAttribute('aria-pressed',String(!muted)); if(muted&&synth){try{synth.cancel();}catch(e){}} else audio(); });
+  $('btnFull').addEventListener('click',()=>{ const el=document.documentElement; const fn=el.requestFullscreen||el.webkitRequestFullscreen;
+    if(document.fullscreenElement||document.webkitFullscreenElement){ (document.exitFullscreen||document.webkitExitFullscreen).call(document); return; }
+    if(fn){ try{ const r=fn.call(el); if(r&&r.catch)r.catch(()=>setStatus('全画面不可: ホーム画面に追加して開く')); }catch(e){ setStatus('全画面不可: ホーム画面に追加して開く'); } }
+    else setStatus('全画面不可: ホーム画面に追加して開く'); });
+  document.addEventListener('keydown',e=>{ if(!$('sheet').hidden)return; if(e.code==='Space'){e.preventDefault(); if(running)pass(active); else if(started)start();} if(e.key==='p'||e.key==='Escape'){ if(running)pause(); } });
+
+  // ---------- settings ----------
+  function fillForm(){ $('mode'+{move:'Move',byo:'Byo',fischer:'Fischer'}[cfg.mode]).checked=true;
+    ['nMin','nSec','mSec','i0','t0','i1','t1','i2','t2','i3','rate','volume'].forEach(k=>$(k).value=cfg[k]); $('volumeVal').textContent=Math.round(cfg.volume*100)+'%';
+    (document.querySelector('input[name=skin][value="'+cfg.skin+'"]')||document.querySelector('input[name=skin]')).checked=true; $('optSpeech').checked=cfg.speech;$('optClick').checked=cfg.click;$('optFace').checked=cfg.face; if(cfg.voice)$('voice').value=cfg.voice; updateLabels(); }
+  function updateLabels(){ const m=document.querySelector('input[name=mode]:checked').value;
+    $('lblN').textContent=m==='move'?'一手の時間':'持ち時間'; $('lblM').hidden=(m==='move'); $('lblM').firstChild.textContent=m==='fischer'?'一手ごとの加算 ':'秒読み '; }
+  document.querySelectorAll('input[name=mode]').forEach(r=>r.addEventListener('change',updateLabels));
+  $('btnSettings').addEventListener('click',()=>{ fillForm(); $('sheet').hidden=false; });
+  $('volume').addEventListener('input',()=>{ $('volumeVal').textContent=Math.round($('volume').value*100)+'%'; });
+  $('btnTest').addEventListener('click',()=>{ const keep=cfg.volume, keepR=cfg.rate, keepV=cfg.voice; cfg.volume=parseFloat($('volume').value); cfg.rate=parseFloat($('rate').value)||1; cfg.voice=$('voice').value; audio(); click(); say('残り1分'); cfg.volume=keep; cfg.rate=keepR; cfg.voice=keepV; });
+  $('btnCancel').addEventListener('click',()=>{ $('sheet').hidden=true; });
+  function applyForm(){
+    const num=(k,min,def)=>{ const v=parseInt($(k).value,10); return isNaN(v)||v<min?def:v; };
+    cfg.mode=document.querySelector('input[name=mode]:checked').value;
+    cfg.nMin=num('nMin',0,0); cfg.nSec=num('nSec',0,0); if(cfg.nMin*60+cfg.nSec<1){cfg.nMin=0;cfg.nSec=30;}
+    cfg.mSec=num('mSec',1,30); cfg.i0=num('i0',1,5); cfg.t0=num('t0',1,5); cfg.i1=num('i1',1,60); cfg.t1=num('t1',1,60); cfg.i2=num('i2',1,10); cfg.t2=num('t2',1,10); cfg.i3=num('i3',1,1);
+    cfg.rate=parseFloat($('rate').value)||1; cfg.volume=parseFloat($('volume').value); if(isNaN(cfg.volume))cfg.volume=1; cfg.voice=$('voice').value; cfg.skin=document.querySelector('input[name=skin]:checked').value; applySkin(); cfg.speech=$('optSpeech').checked; cfg.click=$('optClick').checked; cfg.face=$('optFace').checked;
+    try{localStorage.setItem('taikyoku-clock',JSON.stringify(cfg));}catch(e){}
+    $('app').classList.toggle('face',cfg.face); $('sheet').hidden=true; audio(); }
+  $('btnApply').addEventListener('click',()=>{ applyForm(); render(); });
+  $('form').addEventListener('submit',e=>{ e.preventDefault(); applyForm(); reset(); say('設定しました'); });
+
+  function applySkin(){ document.documentElement.setAttribute('data-skin',cfg.skin||'default'); }
+  document.querySelectorAll('input[name=skin]').forEach(r=>r.addEventListener('change',()=>{ document.documentElement.setAttribute('data-skin',r.value); }));
+  $('btnCancel').addEventListener('click',applySkin);
+  applySkin();
+  $('app').classList.toggle('face',cfg.face);
+  reset();
+})();
+</script>
+
+</body>
+</html>
