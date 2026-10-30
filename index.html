@@ -81,7 +81,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--ui);overflo
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px;}
 .sheet[hidden]{display:none;}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:.8em;width:min(100%,640px);max-height:100%;overflow:auto;
-  padding:1.2em 1.3em;display:flex;flex-direction:column;gap:1.1em;font-size:16px;}
+  padding:1.2em 1.3em;display:flex;flex-direction:column;gap:1.2em;font-size:16px;}
 .panel h2{font-family:var(--jp);font-weight:700;margin:0;font-size:1.25em;letter-spacing:.15em;}
 .panel h3{margin:0 0 .5em;font-size:.85em;letter-spacing:.12em;color:var(--muted);font-weight:600;text-transform:uppercase;}
 .panel h3.jp{font-family:var(--jp);text-transform:none;font-size:1em;color:var(--fg);}
@@ -92,11 +92,18 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--ui);overflo
 .modes small{display:block;color:var(--muted);margin-top:.15em;}
 .row{display:flex;flex-wrap:wrap;gap:.6em 1.2em;align-items:center;}
 .row label{display:flex;align-items:center;gap:.4em;}
-input[type=number]{font:inherit;font-variant-numeric:tabular-nums;width:4.2em;padding:.35em .4em;background:var(--bg);color:var(--fg);
+input[type=number]{font:inherit;font-variant-numeric:tabular-nums;width:3.4em;padding:.35em .4em;background:var(--bg);color:var(--fg);
   border:1px solid var(--line);border-radius:.35em;text-align:right;}
 select,input[type=range]{font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:.35em;padding:.3em .4em;max-width:100%;}
-.ann{display:grid;grid-template-columns:auto 1fr;gap:.5em .8em;align-items:center;}
-.ann .lead{color:var(--muted);font-size:.9em;}
+.panel>div{padding-top:1.1em;border-top:1px solid var(--line);}
+.panel>div:first-of-type{padding-top:0;border-top:0;}
+.fields{display:flex;flex-direction:column;gap:.6em;}
+.field{display:flex;align-items:center;justify-content:space-between;gap:.8em;flex-wrap:nowrap;}
+.field .flabel{display:flex;align-items:center;gap:.3em;color:var(--muted);white-space:nowrap;}
+.field .fin{display:flex;align-items:center;gap:.3em;white-space:nowrap;flex-shrink:0;}
+.field .fin select{max-width:min(55vw,16em);}
+.field .fin input[type=range]{width:min(45vw,12em);}
+.toggles{display:flex;flex-direction:column;gap:.6em;}
 .toggles label{display:flex;align-items:center;gap:.5em;}
 .skins{display:flex;flex-wrap:wrap;gap:.5em;}
 .skins label{display:flex;align-items:center;gap:.5em;padding:.45em .8em;border:1px solid var(--line);border-radius:2em;cursor:pointer;}
@@ -149,19 +156,20 @@ select,input[type=range]{font:inherit;background:var(--bg);color:var(--fg);borde
         <label><input type="radio" name="mode" value="fischer" id="modeFischer"><span>フィッシャー方式<small>持ち時間 n から始め、一手指すごとに m 秒を加算。</small></span></label>
       </div>
     </div>
-    <div class="row">
-      <label id="lblN">持ち時間</label>
-      <label><input type="number" id="nMin" min="0" max="599" value="10"> 分</label>
-      <label><input type="number" id="nSec" min="0" max="59" value="0"> 秒</label>
-      <label id="lblM">秒読み <input type="number" id="mSec" min="1" max="3599" value="30"> 秒</label>
+    <div>
+      <h3 class="jp">時間</h3>
+      <div class="fields">
+        <div class="field"><span class="flabel" id="lblN">持ち時間</span><span class="fin"><input type="number" id="nMin" min="0" max="599" value="10"> 分 <input type="number" id="nSec" min="0" max="59" value="0"> 秒</span></div>
+        <div class="field" id="lblM"><span class="flabel" id="lblMText">秒読み</span><span class="fin"><input type="number" id="mSec" min="1" max="3599" value="30"> 秒</span></div>
+      </div>
     </div>
     <div>
       <h3 class="jp">お知らせのタイミング（残り時間）</h3>
-      <div class="ann">
-        <span class="lead">通常</span><span><input type="number" id="i0" min="1" value="5"> 分ごと</span>
-        <span class="lead">残り</span><span><input type="number" id="t0" min="1" value="5"> 分以下は <input type="number" id="i1" min="1" value="60"> 秒ごと</span>
-        <span class="lead">残り</span><span><input type="number" id="t1" min="1" value="60"> 秒以下は <input type="number" id="i2" min="1" value="10"> 秒ごと</span>
-        <span class="lead">残り</span><span><input type="number" id="t2" min="1" value="10"> 秒以下は <input type="number" id="i3" min="1" value="1"> 秒ごと</span>
+      <div class="fields">
+        <div class="field"><span class="flabel">通常</span><span class="fin"><input type="number" id="i0" min="1" value="5"> 分ごと</span></div>
+        <div class="field"><span class="flabel">残り <input type="number" id="t0" min="1" value="5"> 分以下</span><span class="fin"><input type="number" id="i1" min="1" value="60"> 秒ごと</span></div>
+        <div class="field"><span class="flabel">残り <input type="number" id="t1" min="1" value="60"> 秒以下</span><span class="fin"><input type="number" id="i2" min="1" value="10"> 秒ごと</span></div>
+        <div class="field"><span class="flabel">残り <input type="number" id="t2" min="1" value="10"> 秒以下</span><span class="fin"><input type="number" id="i3" min="1" value="1"> 秒ごと</span></div>
       </div>
     </div>
     <div>
@@ -177,17 +185,20 @@ select,input[type=range]{font:inherit;background:var(--bg);color:var(--fg);borde
     </div>
     <div>
       <h3 class="jp">音声</h3>
-      <div class="row">
-        <label>声 <select id="voice"></select></label>
-        <label>速さ <input type="range" id="rate" min="0.7" max="1.6" step="0.1" value="1.1"></label>
-        <label>音量 <input type="range" id="volume" min="0" max="1" step="0.05" value="1"> <span id="volumeVal">100%</span> <button type="button" id="btnTest">試聴</button></label>
+      <div class="fields">
+        <div class="field"><span class="flabel">声</span><span class="fin"><select id="voice"></select></span></div>
+        <div class="field"><span class="flabel">速さ</span><span class="fin"><input type="range" id="rate" min="0.7" max="1.6" step="0.1" value="1.1"></span></div>
+        <div class="field"><span class="flabel">音量</span><span class="fin"><input type="range" id="volume" min="0" max="1" step="0.05" value="1"> <span id="volumeVal">100%</span> <button type="button" id="btnTest">試聴</button></span></div>
       </div>
       <p class="note">iPad 内蔵の日本語音声（Kyoko など）を使います。設定 → アクセシビリティ → 読み上げコンテンツ → 声 から別の日本語音声を追加できます。</p>
     </div>
-    <div class="toggles row">
-      <label><input type="checkbox" id="optSpeech" checked> 秒読みを音声で読む</label>
-      <label><input type="checkbox" id="optClick" checked> 手を渡すときカチッと鳴らす</label>
-      <label><input type="checkbox" id="optFace" checked> 上側を反転（対面用）</label>
+    <div>
+      <h3 class="jp">その他</h3>
+      <div class="toggles">
+        <label><input type="checkbox" id="optSpeech" checked> 秒読みを音声で読む</label>
+        <label><input type="checkbox" id="optClick" checked> 手を渡すときカチッと鳴らす</label>
+        <label><input type="checkbox" id="optFace" checked> 上側を反転（対面用）</label>
+      </div>
     </div>
     <div class="actions">
       <button type="button" id="btnCancel">閉じる</button>
@@ -319,7 +330,7 @@ select,input[type=range]{font:inherit;background:var(--bg);color:var(--fg);borde
     ['nMin','nSec','mSec','i0','t0','i1','t1','i2','t2','i3','rate','volume'].forEach(k=>$(k).value=cfg[k]); $('volumeVal').textContent=Math.round(cfg.volume*100)+'%';
     (document.querySelector('input[name=skin][value="'+cfg.skin+'"]')||document.querySelector('input[name=skin]')).checked=true; $('optSpeech').checked=cfg.speech;$('optClick').checked=cfg.click;$('optFace').checked=cfg.face; if(cfg.voice)$('voice').value=cfg.voice; updateLabels(); }
   function updateLabels(){ const m=document.querySelector('input[name=mode]:checked').value;
-    $('lblN').textContent=m==='move'?'一手の時間':'持ち時間'; $('lblM').hidden=(m==='move'); $('lblM').firstChild.textContent=m==='fischer'?'一手ごとの加算 ':'秒読み '; }
+    $('lblN').textContent=m==='move'?'一手の時間':'持ち時間'; $('lblM').hidden=(m==='move'); $('lblMText').textContent=m==='fischer'?'一手ごとの加算':'秒読み'; }
   document.querySelectorAll('input[name=mode]').forEach(r=>r.addEventListener('change',updateLabels));
   $('btnSettings').addEventListener('click',()=>{ fillForm(); $('sheet').hidden=false; });
   $('volume').addEventListener('input',()=>{ $('volumeVal').textContent=Math.round($('volume').value*100)+'%'; });
